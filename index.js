@@ -55,15 +55,18 @@ const handlers = {
         this.emit(':ask', speechOutput, reprompt);
     },
     'AMAZON.CancelIntent': function() {
+         quesList = [];
         speechOutput = 'Thank you. Will Play again soon';
         this.emit(':tell', speechOutput);
     },
     'AMAZON.StopIntent': function() {
+         quesList = [];
         speechOutput = 'Thank you. Will Play again soon';
         this.emit(':tell', speechOutput);
     },
     'SessionEndedRequest': function() {
         speechOutput = '';
+        quesList = [];
         //this.emit(':saveState', true);//uncomment to save attributes to db on session end
         this.emit(':tell', speechOutput);
     },
@@ -124,22 +127,22 @@ const handlers = {
         documentClient.scan(params).promise()
             .then(data => {
 
-                const jokeCount = data.Count;
-                const randomJoke = Math.floor(Math.random() * jokeCount);
+                const questionCount = data.Count;
+                const randomQuestion = Math.floor(Math.random() * questionCount);
                 var listQuestion  = data.Items;
                 setQuestions(listQuestion);
 
-                var answerList = quesList[randomJoke].answers;
+                var answerList = quesList[randomQuestion].answers;
                 var answerlenght = Object.keys(answerList).length;
                 //session variables
 
-                this.attributes.currentIndex = 0;
-                this.attributes.score = 0;
-                this.attributes.correct = quesList[randomJoke].correct;
-                this.attributes.answer = answerList[quesList[randomJoke].correct];
-                this.attributes.totalQ = jokeCount;
+                this.attributes.currentIndex = 1;  //current Question number
+                this.attributes.score = 0; // current score
+                this.attributes.correct = quesList[randomQuestion].correct; //currect question Option like A,B,C
+                this.attributes.answer = answerList[quesList[randomQuestion].correct]; //current question answer
+                this.attributes.totalQ = questionCount; //TOTAL NUMBER OF QUESTION
 
-                speechOutput = `You choice subject is  ${quesList[randomJoke].category}.<break time="1s"/>.  <prosody rate="medium"> First question <break time="1s"/> ${quesList[randomJoke].question}<break time="1s"/> Choose your Answer`;
+                speechOutput = `You choice subject is  ${quesList[randomQuestion].category}.<break time="1s"/>.  <prosody rate="medium"> First question <break time="1s"/> ${quesList[randomQuestion].question}<break time="1s"/> Choose your Answer`;
                 for (i = 0; i < answerlenght; i++) {
                     speechOutput += `Option ${myMap.get(i)} is  ${answerList[myMap.get(i)]} <break time="1s"/>`;
                 }
@@ -153,7 +156,7 @@ const handlers = {
     },
     'AnswerChoice': function() {
         speechOutput = '';
-        console.log("In Answer Intent****************");
+        //Getting the session attributes values.
         var sessCorrect = this.attributes.correct;
         var sesscurrentIndex = this.attributes.currentIndex;
         var sesstotalQ = this.attributes.totalQ;
@@ -183,45 +186,28 @@ const handlers = {
             this.emit(":tell", speechOutput, speechOutput);
         }
         else {
-            var params = {
-                TableName: TABLE_NAME,
-                // ProjectionExpression: "sectionName,subSectionCNT",
-                FilterExpression: "#category = :subCat",
-                ExpressionAttributeNames: {
-                    "#category": "category"
-                },
-                ExpressionAttributeValues: {
-                    ":subCat": sessSubject //sectionID
-                },
-            };
-            console.log(params);
-            var i;
-            documentClient.scan(params).promise()
-                .then(data => {
+                    var iAnswer;
+                    var ques = getQuestions();
+                    const questionCount = sesstotalQ;
+                    const randomQuestion = Math.floor(Math.random() * questionCount);
+                    var allQuestions = getQuestions();
 
-                    const jokeCount = data.Count;
-                    const randomJoke = Math.floor(Math.random() * jokeCount);
-                    var quesList = data.Items;
-
-                    var answerList = quesList[randomJoke].answers;
+                    var answerList = allQuestions[randomQuestion].answers;
                     var answerlenght = Object.keys(answerList).length;
                     //session variables
 
                     this.attributes.currentIndex = sesscurrentIndex + 1;
                     this.attributes.score = sessScore;
-					this.attributes.correct = quesList[randomJoke].correct;
-                    this.attributes.totalQ = jokeCount;
+					this.attributes.correct = allQuestions[randomQuestion].correct;
+                    this.attributes.totalQ = randomQuestion;
 
-                    speechOutput += `<prosody rate="medium"> You're Score is ${sessScore} out of ${sesscurrentIndex}<break time="1s"/> Next Question  , <break time="1s"/> ${quesList[randomJoke].question}<break time="1s"/> Choose your Answer`;
-                    for (i = 0; i < answerlenght; i++) {
-                        speechOutput += `Option ${myMap.get(i)} is  ${answerList[myMap.get(i)]} <break time="1s"/>`;
+                    speechOutput += `<prosody rate="medium"> You're Score is ${sessScore} out of ${sesscurrentIndex}<break time="1s"/> Next Question  , <break time="1s"/> ${allQuestions[randomQuestion].question}<break time="1s"/> Choose your Answer`;
+                    for (iAnswer = 0; iAnswer < answerlenght; iAnswer++) {
+                        speechOutput += `Option ${myMap.get(iAnswer)} is  ${answerList[myMap.get(iAnswer)]} <break time="1s"/>`;
                     }
                     speechOutput += "</prosody>";
                     this.emit(":ask", speechOutput, speechOutput);
-                })
-                .catch(err => {
-                    console.error(err);
-                });
+               
         }
 
     },
@@ -243,11 +229,12 @@ exports.handler = (event, context) => {
 
 //    END of Intent Handlers {} ========================================================================================
 // 3. Helper Function  =================================================================================================
+//set the list of question retreived
 function setQuestions(listQuestion)
 {
     quesList = listQuestion;
 }
-
+//return the list of question retreived
 function getQuestions()
 {
     return quesList;
