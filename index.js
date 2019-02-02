@@ -38,11 +38,11 @@ myMap.set(4, "E");
 
 
 var subMap = new Map();
-subMap.set("A", "social");
-subMap.set("B", "Science");
-subMap.set("C", "Maths");
-subMap.set("D", "English");
-subMap.set("E", "Hindi");
+subMap.set("1", "social");
+subMap.set("2", "science");
+subMap.set("3", "maths");
+subMap.set("4", "english");
+subMap.set("5", "hindi");
 
 
 const handlers = {
@@ -55,12 +55,12 @@ const handlers = {
         this.emit(':ask', speechOutput, reprompt);
     },
     'AMAZON.CancelIntent': function() {
-         quesList = [];
+        quesList = [];
         speechOutput = 'Thank you. Will Play again soon';
         this.emit(':tell', speechOutput);
     },
     'AMAZON.StopIntent': function() {
-         quesList = [];
+        quesList = [];
         speechOutput = 'Thank you. Will Play again soon';
         this.emit(':tell', speechOutput);
     },
@@ -84,9 +84,7 @@ const handlers = {
         speechOutput = '';
 
         //any intent slot variables are listed here for convenience
-
-
-        //Your custom intent handling goes here
+       //Your custom intent handling goes here
         speechOutput = "This is a place holder response for the intent named AMAZON.FallbackIntent. This intent has no slots. Anything else?";
         this.emit(":ask", speechOutput, speechOutput);
     },
@@ -94,21 +92,18 @@ const handlers = {
         speechOutput = '';
 
         //Your custom intent handling goes here
-        speechOutput += `Choose the Subject <break time="1s"/> A <break time="1s"/> Social <break time="1s"/> 	B <break time="1s"/> Science <break time="1s"/>			C <break time="1s"/> English <break time="1s"/>
-			D <break time="1s"/> Maths <break time="1s"/> E <break time="1s"/> Hindi`;
+        speechOutput += `Choose the Subject <break time="1s"/> 1.  Social <break time="1s"/> 	2.  Science <break time="1s"/>			3. English <break time="1s"/>	4.  Maths <break time="1s"/> 5.  Hindi`;
         this.emit(":ask", speechOutput, speechOutput);
     },
     'ServiceChoice': function() {
         speechOutput = '';
 
-        //any intent slot variables are listed here for convenience
-
-        let choiceSlotRaw = this.event.request.intent.slots.choice.value;
-        console.log(choiceSlotRaw);
-        let choiceSlot = resolveCanonical(this.event.request.intent.slots.choice);
-        console.log(choiceSlot);
-
-        var subCat = subMap.get(choiceSlot);
+        let optionSlotRaw = this.event.request.intent.slots.option.value;
+		console.log(optionSlotRaw);
+		let optionSlot = resolveCanonical(this.event.request.intent.slots.option);
+		console.log(optionSlot);
+		
+        var subCat = subMap.get(optionSlot);
         this.attributes.subject = subCat;
 
         var params = {
@@ -123,28 +118,29 @@ const handlers = {
             },
         };
         console.log(params);
-        var i;
+        var iAnswer;
         documentClient.scan(params).promise()
             .then(data => {
 
-                const questionCount = data.Count;
-                const randomQuestion = Math.floor(Math.random() * questionCount);
-                var listQuestion  = data.Items;
+                var questionCount = data.Count;
+                var randomQuestion = Math.floor(Math.random() * questionCount);
+                if(randomQuestion === 0) { randomQuestion = Math.floor(Math.random() * questionCount); }
+                var listQuestion = data.Items;
                 setQuestions(listQuestion);
 
                 var answerList = quesList[randomQuestion].answers;
                 var answerlenght = Object.keys(answerList).length;
                 //session variables
 
-                this.attributes.currentIndex = 1;  //current Question number
+                this.attributes.currentIndex = 1; //current Question number
                 this.attributes.score = 0; // current score
                 this.attributes.correct = quesList[randomQuestion].correct; //currect question Option like A,B,C
                 this.attributes.answer = answerList[quesList[randomQuestion].correct]; //current question answer
                 this.attributes.totalQ = questionCount; //TOTAL NUMBER OF QUESTION
 
-                speechOutput = `You choice subject is  ${quesList[randomQuestion].category}.<break time="1s"/>.  <prosody rate="medium"> First question <break time="1s"/> ${quesList[randomQuestion].question}<break time="1s"/> Choose your Answer`;
-                for (i = 0; i < answerlenght; i++) {
-                    speechOutput += `Option ${myMap.get(i)} is  ${answerList[myMap.get(i)]} <break time="1s"/>`;
+                speechOutput = `You choose ${quesList[randomQuestion].category}.<break time="1s"/>.  <prosody rate="slow"> First question <break time="1s"/> ${quesList[randomQuestion].question}<break time="1s"/> Choose your Answer`;
+                for (iAnswer = 0; iAnswer < answerlenght; iAnswer++) {
+                    speechOutput += `<break time="1s"/> Answer ${myMap.get(iAnswer)} is  ${answerList[myMap.get(iAnswer)]}`;
                 }
                 speechOutput += "</prosody>";
 
@@ -163,51 +159,61 @@ const handlers = {
         var sessScore = this.attributes.score;
         var sessSubject = this.attributes.subject;
         var sessAnswer = this.attributes.answer;
-        //any intent slot variables are listed here for convenience
+        
+        console.log("The current Index", sesscurrentIndex);
+        console.log("The Correct", sessCorrect);
+        console.log("Total Questions", sesstotalQ);
+        console.log("Total Score ", sessScore);
+        console.log("the answer", sessAnswer)
+        
 
         let choiceSlotRaw = this.event.request.intent.slots.choice.value;
         console.log(choiceSlotRaw);
         let choiceSlot = resolveCanonical(this.event.request.intent.slots.choice);
         console.log(choiceSlot);
-
+        
+        //Check if the Answer is correct or not
         if (sessCorrect.toUpperCase() === choiceSlot.toUpperCase()) {
             sessScore++;
-            speechOutput += `Correct, You're Score is ${sessScore} out of ${sesscurrentIndex} <break time="1s"/>`;
+            speechOutput += `Correct,`;
 
         }
         else {
             speechOutput += `Incorrect, The correct answer is ${sessAnswer} <break time="1s"/>`;
         }
 
-        console.log("the spechoutput", speechOutput);
-
+        //Check if this is the last question, else get the next question
         if (sesscurrentIndex == sesstotalQ) {
             speechOutput += `You answered ${sessScore} of ${sesscurrentIndex} questions`;
             this.emit(":tell", speechOutput, speechOutput);
         }
         else {
-                    var iAnswer;
-                    var ques = getQuestions();
-                    const questionCount = sesstotalQ;
-                    const randomQuestion = Math.floor(Math.random() * questionCount);
-                    var allQuestions = getQuestions();
+            var iAnswer;
+            
+            var randomQuestion = Math.floor(Math.random() * sesstotalQ);
+            if(randomQuestion == 0) { randomQuestion = Math.floor(Math.random() * sesstotalQ); } 
+            console.log("the questioncount", sesstotalQ)
+            console.log("the random number", randomQuestion)
+            var allQuestions = getQuestions();
 
-                    var answerList = allQuestions[randomQuestion].answers;
-                    var answerlenght = Object.keys(answerList).length;
-                    //session variables
+            var answerList = allQuestions[randomQuestion].answers;
+            var answerlenght = Object.keys(answerList).length;
 
-                    this.attributes.currentIndex = sesscurrentIndex + 1;
-                    this.attributes.score = sessScore;
-					this.attributes.correct = allQuestions[randomQuestion].correct;
-                    this.attributes.totalQ = randomQuestion;
+            //session variables
+            this.attributes.currentIndex = sesscurrentIndex + 1;
+            this.attributes.score = sessScore;
+            this.attributes.correct = allQuestions[randomQuestion].correct;
+            this.attributes.answer = answerList[allQuestions[randomQuestion].correct]; 
+            
+           
 
-                    speechOutput += `<prosody rate="medium"> You're Score is ${sessScore} out of ${sesscurrentIndex}<break time="1s"/> Next Question  , <break time="1s"/> ${allQuestions[randomQuestion].question}<break time="1s"/> Choose your Answer`;
-                    for (iAnswer = 0; iAnswer < answerlenght; iAnswer++) {
-                        speechOutput += `Option ${myMap.get(iAnswer)} is  ${answerList[myMap.get(iAnswer)]} <break time="1s"/>`;
-                    }
-                    speechOutput += "</prosody>";
-                    this.emit(":ask", speechOutput, speechOutput);
-               
+            speechOutput += `<prosody rate="slow"> You're Score is ${sessScore} out of ${sesscurrentIndex}<break time="1s"/> Next Question  , <break time="1s"/> ${allQuestions[randomQuestion].question}<break time="1s"/> Choose your Answer`;
+            for (iAnswer = 0; iAnswer < answerlenght; iAnswer++) {
+                speechOutput += `<break time="1s"/> Answer ${myMap.get(iAnswer)} is  ${answerList[myMap.get(iAnswer)]} `;
+            }
+            speechOutput += "</prosody>";
+            this.emit(":ask", speechOutput, speechOutput);
+
         }
 
     },
@@ -230,15 +236,14 @@ exports.handler = (event, context) => {
 //    END of Intent Handlers {} ========================================================================================
 // 3. Helper Function  =================================================================================================
 //set the list of question retreived
-function setQuestions(listQuestion)
-{
+function setQuestions(listQuestion) {
     quesList = listQuestion;
 }
 //return the list of question retreived
-function getQuestions()
-{
+function getQuestions() {
     return quesList;
 }
+
 
 function resolveCanonical(slot) {
     //this function looks at the entity resolution part of request and returns the slot value if a synonyms is provided
