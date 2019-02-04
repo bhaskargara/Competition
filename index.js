@@ -127,18 +127,18 @@ const handlers = {
                 if(randomQuestion === 0) { randomQuestion = Math.floor(Math.random() * questionCount); }
                 var listQuestion = data.Items;
                 setQuestions(listQuestion);
-
-                var answerList = quesList[randomQuestion].answers;
+               
+                var answerList = listQuestion[randomQuestion].answers;
                 var answerlenght = Object.keys(answerList).length;
                 //session variables
 
                 this.attributes.currentIndex = 1; //current Question number
                 this.attributes.score = 0; // current score
-                this.attributes.correct = quesList[randomQuestion].correct; //currect question Option like A,B,C
-                this.attributes.answer = answerList[quesList[randomQuestion].correct]; //current question answer
+                this.attributes.correct = listQuestion[randomQuestion].correct; //currect question Option like A,B,C
+                this.attributes.answer = answerList[listQuestion[randomQuestion].correct]; //current question answer
                 this.attributes.totalQ = questionCount; //TOTAL NUMBER OF QUESTION
 
-                speechOutput = `You choose ${quesList[randomQuestion].category}.<break time="1s"/>.  <prosody rate="slow"> First question <break time="1s"/> ${quesList[randomQuestion].question}<break time="1s"/> Choose your Answer`;
+                speechOutput = `You choose ${listQuestion[randomQuestion].category}.<break time="1s"/>.  <prosody rate="slow"> First question <break time="1s"/> ${listQuestion[randomQuestion].question}<break time="1s"/> Choose your Answer`;
                 for (iAnswer = 0; iAnswer < answerlenght; iAnswer++) {
                     speechOutput += `<break time="1s"/> Answer ${myMap.get(iAnswer)} is  ${answerList[myMap.get(iAnswer)]}`;
                 }
@@ -157,9 +157,8 @@ const handlers = {
         var sesscurrentIndex = this.attributes.currentIndex;
         var sesstotalQ = this.attributes.totalQ;
         var sessScore = this.attributes.score;
-        var sessSubject = this.attributes.subject;
         var sessAnswer = this.attributes.answer;
-        
+         console.log("******** After session **************");
         console.log("The current Index", sesscurrentIndex);
         console.log("The Correct", sessCorrect);
         console.log("Total Questions", sesstotalQ);
